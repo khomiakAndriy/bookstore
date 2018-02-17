@@ -1,6 +1,7 @@
 package ua.bookstore.config;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
+import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +35,8 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 import java.beans.PropertyVetoException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Properties;
 
 @Configuration
@@ -61,56 +64,76 @@ public class AppConfig implements WebMvcConfigurer {
         multipartResolver.setMaxUploadSize(10*1024*1024);
         return multipartResolver;
     }
-
+//heroku
     @Bean
-    public DataSource dataSource() {
+    public BasicDataSource dataSource() throws URISyntaxException {
+        URI dbUri = new URI(System.getenv("CLEARDB_DATABASE_URL"));
 
-        ComboPooledDataSource dataSource = new ComboPooledDataSource();
+        String username = dbUri.getUserInfo().split(":")[0];
+        String password = dbUri.getUserInfo().split(":")[1];
+        String dbUrl = "jdbc:mysql://" + dbUri.getHost() + dbUri.getPath();
 
-//        DriverManagerDataSource dataSource = new DriverManagerDataSource();
-        try {
-            dataSource.setDriverClass(env.getProperty("jdbc.driver"));
-            dataSource.setJdbcUrl(env.getProperty("jdbc.url"));
-            dataSource.setUser(env.getProperty("jdbc.user"));
-            dataSource.setPassword(env.getProperty("jdbc.password"));
+        BasicDataSource basicDataSource = new BasicDataSource();
+        basicDataSource.setUrl(dbUrl);
+        basicDataSource.setUsername(username);
+        basicDataSource.setPassword(password);
 
-            dataSource.setInitialPoolSize(Integer.parseInt(env.getProperty("connection.pool.initialSize")));
-            dataSource.setMinPoolSize(Integer.parseInt(env.getProperty("connection.pool.minPoolSize")));
-            dataSource.setMaxPoolSize(Integer.parseInt(env.getProperty("connection.pool.maxPoolSize")));
-            dataSource.setMaxIdleTime(Integer.parseInt(env.getProperty("connection.pool.maxIdleTime")));
-        } catch (PropertyVetoException e) {
-            logger.warn(e);
-            throw new RuntimeException(e);
-        }
-
-        return dataSource;
+        return basicDataSource;
     }
 
-    @Value("classpath:db/init_db.sql")
-    private Resource schemaScript;
+//    @Bean
+//    public DataSource dataSource() {
+//
+//        ComboPooledDataSource dataSource = new ComboPooledDataSource();
+//
+////        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+//        try {
+//            dataSource.setDriverClass(env.getProperty("jdbc.driver"));
+//            dataSource.setJdbcUrl(env.getProperty("jdbc.url"));
+//            dataSource.setUser(env.getProperty("jdbc.user"));
+//            dataSource.setPassword(env.getProperty("jdbc.password"));
+//
+//            dataSource.setInitialPoolSize(Integer.parseInt(env.getProperty("connection.pool.initialSize")));
+//            dataSource.setMinPoolSize(Integer.parseInt(env.getProperty("connection.pool.minPoolSize")));
+//            dataSource.setMaxPoolSize(Integer.parseInt(env.getProperty("connection.pool.maxPoolSize")));
+//            dataSource.setMaxIdleTime(Integer.parseInt(env.getProperty("connection.pool.maxIdleTime")));
+//        } catch (PropertyVetoException e) {
+//            logger.warn(e);
+//            throw new RuntimeException(e);
+//        }
+//
+//        return dataSource;
+//    }
 
-    @Value("classpath:db/populate_db.sql")
-    private Resource populateScript;
-
-    @Bean
-    public DataSourceInitializer dataSourceInitializer(final DataSource dataSource) {
-        final DataSourceInitializer initializer = new DataSourceInitializer();
-        initializer.setDataSource(dataSource);
-        initializer.setDatabasePopulator(databasePopulator());
-        return initializer;
-    }
-
-    private DatabasePopulator databasePopulator() {
-        final ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
-        populator.addScript(schemaScript);
-        populator.addScript(populateScript);
-        return populator;
-    }
+//    @Value("classpath:db/init_db.sql")
+//    private Resource schemaScript;
+//
+//    @Value("classpath:db/populate_db.sql")
+//    private Resource populateScript;
+//
+//    @Bean
+//    public DataSourceInitializer dataSourceInitializer(final DataSource dataSource) {
+//        final DataSourceInitializer initializer = new DataSourceInitializer();
+//        initializer.setDataSource(dataSource);
+//        initializer.setDatabasePopulator(databasePopulator());
+//        return initializer;
+//    }
+//
+//    private DatabasePopulator databasePopulator() {
+//        final ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
+//        populator.addScript(schemaScript);
+//        populator.addScript(populateScript);
+//        return populator;
+//    }
 
     @Bean
     public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
-        em.setDataSource(dataSource());
+        try {
+            em.setDataSource(dataSource());
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
         em.setPackagesToScan(new String[]{"ua.bookstore.entity"});
         em.setJpaProperties(additionalProperties());
 
