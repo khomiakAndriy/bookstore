@@ -9,7 +9,11 @@ public interface UserService {
 
     public User save(User user);
 
+    public void remove(int id);
+
     public boolean userExists(String email);
 
     public User get(int id);
+
+    public User getByEmail(String emeil);
 }

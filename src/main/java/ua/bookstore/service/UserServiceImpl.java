@@ -27,6 +27,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
+    public void remove(int id) {
+        userDao.remove(id);
+    }
+
+    @Override
     public boolean userExists(String email) {
         return userDao.userExists(email);
     }
@@ -34,5 +40,10 @@ public class UserServiceImpl implements UserService {
     @Override
     public User get(int id) {
         return userDao.get(id);
+    }
+
+    @Override
+    public User getByEmail(String emeil) {
+        return userDao.getByEmail(emeil);
     }
 }

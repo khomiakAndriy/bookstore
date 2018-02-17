@@ -1,0 +1,15 @@
+nav{
+    background-color: #c9a67d;
+}
+
+.navbar {
+    height: 40px;
+}
+
+.btn{
+    color: rgba(0,0,0,.7)
+}
+
+.btn-default{
+    background-color: lightgoldenrodyellow;
+}

@@ -1,11 +1,15 @@
 package ua.bookstore.config;
 
+import com.mchange.v2.c3p0.ComboPooledDataSource;
+import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
 import org.springframework.jdbc.datasource.init.DatabasePopulator;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
@@ -18,19 +22,30 @@ import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.web.multipart.MultipartResolver;
+import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
+import java.beans.PropertyVetoException;
 import java.util.Properties;
 
 @Configuration
 @EnableWebMvc
 @EnableTransactionManagement
 @ComponentScan(basePackages = "ua.bookstore")
-public class AppConfig {
+@PropertySource({"classpath:db/persistence-mysql.properties"})
+public class AppConfig implements WebMvcConfigurer {
+    private static final Logger logger = Logger.getLogger(AppConfig.class);
+
+    @Autowired
+    private Environment env;
 
     @Bean
     public ViewResolver viewResolver() {
@@ -41,12 +56,33 @@ public class AppConfig {
     }
 
     @Bean
+    public MultipartResolver multipartResolver(){
+        CommonsMultipartResolver multipartResolver = new CommonsMultipartResolver();
+        multipartResolver.setMaxUploadSize(10*1024*1024);
+        return multipartResolver;
+    }
+
+    @Bean
     public DataSource dataSource() {
-        DriverManagerDataSource dataSource = new DriverManagerDataSource();
-        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
-        dataSource.setUrl("jdbc:mysql://localhost:3306/bookstore?serverTimezone=Europe/Helsinki&useSSL=false");
-        dataSource.setUsername("login");
-        dataSource.setPassword("password");
+
+        ComboPooledDataSource dataSource = new ComboPooledDataSource();
+
+//        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        try {
+            dataSource.setDriverClass(env.getProperty("jdbc.driver"));
+            dataSource.setJdbcUrl(env.getProperty("jdbc.url"));
+            dataSource.setUser(env.getProperty("jdbc.user"));
+            dataSource.setPassword(env.getProperty("jdbc.password"));
+
+            dataSource.setInitialPoolSize(Integer.parseInt(env.getProperty("connection.pool.initialSize")));
+            dataSource.setMinPoolSize(Integer.parseInt(env.getProperty("connection.pool.minPoolSize")));
+            dataSource.setMaxPoolSize(Integer.parseInt(env.getProperty("connection.pool.maxPoolSize")));
+            dataSource.setMaxIdleTime(Integer.parseInt(env.getProperty("connection.pool.maxIdleTime")));
+        } catch (PropertyVetoException e) {
+            logger.warn(e);
+            throw new RuntimeException(e);
+        }
+
         return dataSource;
     }
 
@@ -101,6 +137,14 @@ public class AppConfig {
     Properties additionalProperties() {
         Properties properties = new Properties();
         properties.setProperty("hibernate.dialect", "org.hibernate.dialect.MySQL5Dialect");
+        properties.setProperty("hibernate.show_sql", "true");
         return properties;
+    }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry
+                .addResourceHandler("/resources/**")
+                .addResourceLocations("/resources/");
     }
 }

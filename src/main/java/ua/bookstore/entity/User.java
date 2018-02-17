@@ -6,6 +6,7 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @NamedQueries({
@@ -15,15 +16,11 @@ import java.util.Set;
 
 @Entity
 @Table(name = "users")
-public class User {
+public class User extends AbstractEntity{
 
     public static final String GET_ALLSORTED = "User.getAll";
     public static final String GET_BY_EMAIL = "User.getByEmail";
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
-    private Integer id;
 
     @NotBlank (message = "Must not be null")
     @Size(min = 3, message = "Must be longer than or equal 3")
@@ -31,11 +28,11 @@ public class User {
     private String name;
 
     @NotBlank (message = "Must not be null")
-    @Column(name = "email", nullable = false, unique = true)
+    @Column(name = "email", nullable = false, unique = true,updatable = false)
     private String email;
 
     @NotBlank (message = "Must not be null")
-    @Size(min= 5, message = "Must be longer thaan or equal than 5")
+    @Size(min= 5, message = "Must be longer than or equal than 5")
     @Column(name = "password", nullable = false)
     private String password;
 
@@ -47,6 +44,8 @@ public class User {
     @Column(name = "address")
     private String address;
 
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "user")
+    private List<Order> orderList;
 
     @Column(name = "enabled")
     private boolean enabled = true;
@@ -57,28 +56,26 @@ public class User {
     @ElementCollection(fetch = FetchType.EAGER)
     private Set<Role> roles = new HashSet();
 
-    public Integer getId() {
-        return id;
+    @OneToOne(cascade = CascadeType.ALL, mappedBy = "user")
+    private ShoppingCart shoppingCart;
+
+    public ShoppingCart getShoppingCart() {
+        return shoppingCart;
     }
 
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public boolean isNew(){
-        return this.id==null;
+    public void setShoppingCart(ShoppingCart shoppingCart) {
+        this.shoppingCart = shoppingCart;
     }
 
     public User() {
     }
-
-    public User(String name, String email, String password, String phone, String address, Role role) {
+    public User(String name, String email,String password, String address, Set<Role> roles) {
         this.name = name;
         this.email = email;
         this.password = password;
         this.phone = phone;
         this.address = address;
-        this.roles.add(role);
+        this.roles = roles;
     }
 
     public String getName() {
@@ -121,6 +118,14 @@ public class User {
         this.address = address;
     }
 
+    public List<Order> getOrderList() {
+        return orderList;
+    }
+
+    public void setOrderList(List<Order> orderList) {
+        this.orderList = orderList;
+    }
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -133,11 +138,12 @@ public class User {
         return roles;
     }
 
-
-    public void setRoles(Role role) {
-        this.roles.add(role);
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
     }
-
+    public void addRole(Role role){
+        roles.add(role);
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -152,5 +158,14 @@ public class User {
     @Override
     public int hashCode() {
         return id != null ? id.hashCode() : 0;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "name='" + name + '\'' +
+                ", email='" + email + '\'' +
+                ", id=" + id +
+                '}';
     }
 }
