@@ -60,6 +60,12 @@
         <button class="btn btn-lg btn-primary btn-block" type="submit">Log In</button>
     </form:form>
 
+    <div style="text-align: center; margin-top: 50px">
+        <p>Admin credentials</p>
+        <p>Login - admin@gmail.com</p>
+        <p>password - admin</p>
+    </div>
+
 </div>
 
 
